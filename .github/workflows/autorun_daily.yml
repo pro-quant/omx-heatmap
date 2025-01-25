@@ -1,0 +1,30 @@
+name: Run Autorun Daily Script
+
+on:
+  schedule:
+    - cron: "46 17 * * *" # Run daily at 17:46 UTC
+  workflow_dispatch: # Optional: Allows manual triggering
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest # Use the latest Ubuntu environment
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python
+      - name: Set up Python environment
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.9" # Use your desired Python version
+
+      # Step 3: Install dependencies (if your script needs any)
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Step 4: Run the Python script
+      - name: Run autorun_daily.py
+        run: python autorun_daily.py
