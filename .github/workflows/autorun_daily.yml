@@ -2,7 +2,7 @@ name: Run Autorun Daily Script
 
 on:
   schedule:
-    - cron: "46 17 * * *" # Run daily at 17:46 UTC
+    - cron: "25 02 * * *" # Run daily at 17:46 UTC
   workflow_dispatch: # Optional: Allows manual triggering
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python environment
         uses: actions/setup-python@v3
         with:
-          python-version: "3.9" # Use your desired Python version
+          python-version: "3.12.4" # Use your desired Python version
 
       # Step 3: Install dependencies (if your script needs any)
       - name: Install dependencies
