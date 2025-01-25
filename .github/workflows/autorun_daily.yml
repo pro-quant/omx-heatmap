@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python environment
         uses: actions/setup-python@v3
         with:
-          python-version: "3.9" # Use your desired Python version
+          python-version: "3.12.4" # Use your desired Python version
 
       # Step 3: Install dependencies (if your script needs any)
       - name: Install dependencies
