@@ -416,9 +416,36 @@ def plot_omxs30_sector_treemap(df_combined):
     plt.savefig('OMXS30_Sector_HeatMap_daily.png',
                 dpi=800, bbox_inches="tight")
     plt.show()
-
+    
 
 plot_omxs30_sector_treemap(df_combined)
+
+
+
+import subprocess
+import os
+from datetime import datetime
+
+def upload_plots_to_repo():
+    # Define file paths
+    plot_files = ["OMXS30_HeatMap_daily.png", "OMXS30_Sector_HeatMap_daily.png"]
+    
+    # Commit message
+    commit_message = f"Add daily plots for {datetime.now().strftime('%Y-%m-%d')}"
+
+    # Add files to Git
+    for plot in plot_files:
+        subprocess.run(["git", "add", plot])
+
+    # Commit changes
+    subprocess.run(["git", "commit", "-m", commit_message])
+
+    # Push to the repository
+    subprocess.run(["git", "push", "origin", "main"])
+
+# After saving plots, call the function
+upload_plots_to_repo()
+
 
 
 # %%
