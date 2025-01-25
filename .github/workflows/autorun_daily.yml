@@ -21,12 +21,35 @@ jobs:
         with:
           python-version: "3.10" # Recommended stable version for broad compatibility
 
-      # Step 3: Install dependencies
+      # Step 3: Install fonts (if needed for matplotlib)
+      - name: Install fonts
+        run: sudo apt-get install -y fonts-dejavu-core
+
+      # Step 4: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install --force-reinstall -r requirements.txt; fi
 
-      # Step 4: Run the Python script
+      # Step 5: Log Python environment and packages
+      - name: Log Python environment
+        run: |
+          python --version
+          pip list
+
+      # Step 6: Log repository contents for debugging
+      - name: Log repository contents
+        run: ls -R
+
+      # Step 7: Run the Python script
       - name: Run autorun_daily.py
         run: python autorun_daily.py
+
+      # Step 8: Upload generated plots (optional)
+      - name: Upload generated plots
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: plots
+          path: |
+            *.png
