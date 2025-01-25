@@ -2,7 +2,7 @@ name: Run Autorun Daily Script
 
 on:
   schedule:
-    - cron: "46 17 * * *" # Run daily at 17:46 UTC
+    - cron: "25 02 * * *" # Run daily at 17:46 UTC
   workflow_dispatch: # Optional: Allows manual triggering
 
 jobs:
