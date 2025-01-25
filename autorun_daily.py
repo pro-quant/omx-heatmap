@@ -299,8 +299,8 @@ def plot_omxs30_sector_treemap(df_combined):
     # Ensure necessary columns exist
     required_columns = {"Sector", "SumMarketCap", "WeightedDailyChange"}
     if not required_columns.issubset(df_combined.columns):
-        raise ValueError(f"Missing required columns: {
-                         required_columns - set(df_combined.columns)}")
+        missing_columns = required_columns - set(df_combined.columns)
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     # Check for non-empty data
     if df_combined.empty:
