@@ -1,4 +1,5 @@
 # %%
+import subprocess
 import yfinance as yf
 import pandas as pd
 import time
@@ -8,6 +9,7 @@ import squarify
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 from matplotlib.patheffects import withStroke
+import os
 
 # OMXS30 tickers information
 # omxs30_info = [
@@ -132,6 +134,24 @@ df_info = pd.DataFrame(omxs30_info)
 df_combined = pd.merge(df_info, df_pct_change,
                        left_on="SymbolYahoo", right_on="Symbol", how="left")
 
+# # Step 3: Assign MarketCap and WeightedDailyChange
+# df_combined["SumMarketCap"] = df_combined["MarketCap"]
+# df_combined["WeightedDailyChange"] = df_combined["PctChange"]
+
+# # Step 4: Combine duplicate companies (e.g., ATCO-A and ATCO-B)
+# # Group by `BaseSymbol` and `Sector`, then aggregate `SumMarketCap` and `WeightedDailyChange`
+# df_combined = (
+#     df_combined
+#     .groupby(["BaseSymbol", "Sector"], as_index=False)
+#     .agg({
+#         "SumMarketCap": "sum",  # Sum market caps
+#         "WeightedDailyChange": "mean",  # Average percentage change
+#     })
+# )
+
+# # Print the updated DataFrame
+# print(df_combined)
+
 # Step 3: Assign MarketCap and WeightedDailyChange
 df_combined["SumMarketCap"] = df_combined["MarketCap"]
 df_combined["WeightedDailyChange"] = df_combined["PctChange"]
@@ -147,9 +167,11 @@ df_combined = (
     })
 )
 
-# Print the updated DataFrame
-print(df_combined)
+# Assign a temporary market cap if it's missing or zero
+df_combined["SumMarketCap"] = df_combined["SumMarketCap"].replace(0, 1e9)
 
+# Print the updated DataFrame for debugging
+print(df_combined)
 
 # %%
 # Step 3: Simulate MarketCap and WeightedDailyChange for demonstration purposes
@@ -159,6 +181,28 @@ print(df_combined.columns)
 # ## Fixing heatmap size for each company
 
 # %%
+
+
+def save_plot_with_date(fig, prefix, folder="daily heatmap"):
+    """
+    Save the plot with a unique filename based on the current date.
+
+    Parameters:
+    - fig: The matplotlib figure object to save.
+    - prefix: A string prefix for the filename (e.g., 'OMXS30_Treemap').
+    - folder: The directory where the plot should be saved (default is 'daily heatmap').
+    """
+    # Ensure the folder exists
+    os.makedirs(folder, exist_ok=True)
+
+    # Generate the filename with the current date
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    filename = f"{folder}/{prefix}_{today_date}.png"
+
+    # Save the figure
+    fig.savefig(filename, dpi=800, bbox_inches="tight")
+    print(f"Plot saved as {filename}")
+    return filename
 
 
 def plot_omxs30_treemap_instagram(df_combined):
@@ -269,10 +313,11 @@ def plot_omxs30_treemap_instagram(df_combined):
         fontsize=24, fontweight="bold", y=0.96  # Use `y` to control vertical position
     )
 
+    os.makedirs("daily heatmap", exist_ok=True)
     # Save and show plot
     plt.tight_layout()
-    plt.savefig('OMXS30_HeatMap_daily.png', dpi=800, bbox_inches="tight")
-    plt.show()
+    save_plot_with_date(fig, prefix="OMXS30_Sector_heatmap")
+    plt.close()
 
 
 plot_omxs30_treemap_instagram(df_combined)
@@ -411,41 +456,44 @@ def plot_omxs30_sector_treemap(df_combined):
         fontsize=20, fontweight="bold", y=0.96
     )
 
+    os.makedirs("daily heatmap", exist_ok=True)
     # Save and show plot
     plt.tight_layout()
-    plt.savefig('OMXS30_Sector_HeatMap_daily.png',
-                dpi=800, bbox_inches="tight")
+    save_plot_with_date(fig, prefix="OMXS30_Sector_HeatMap")
     plt.show()
-    
+
 
 plot_omxs30_sector_treemap(df_combined)
 
 
+def upload_plots_to_repo(folder="daily heatmap"):
+    """
+    Add and commit all PNG files in the specified folder to the Git repository.
+    """
+    # Ensure the folder exists
+    if not os.path.exists(folder):
+        print(f"Folder '{folder}' does not exist. No plots to upload.")
+        return
 
-import subprocess
-import os
-from datetime import datetime
+    # Collect all PNG files in the folder
+    plot_files = [os.path.join(folder, f)
+                  for f in os.listdir(folder) if f.endswith(".png")]
 
-def upload_plots_to_repo():
-    # Define file paths
-    plot_files = ["OMXS30_HeatMap_daily.png", "OMXS30_Sector_HeatMap_daily.png"]
-    
-    # Commit message
-    commit_message = f"Add daily plots for {datetime.now().strftime('%Y-%m-%d')}"
+    if not plot_files:
+        print("No PNG files found to commit.")
+        return
 
     # Add files to Git
     for plot in plot_files:
         subprocess.run(["git", "add", plot])
 
-    # Commit changes
+    # Commit message
+    commit_message = f"Add daily plots for {
+        datetime.now().strftime('%Y-%m-%d')}"
+
+    # Commit and push changes
     subprocess.run(["git", "commit", "-m", commit_message])
-
-    # Push to the repository
     subprocess.run(["git", "push", "origin", "main"])
-
-# After saving plots, call the function
-upload_plots_to_repo()
-
 
 
 # %%
