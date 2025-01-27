@@ -134,24 +134,6 @@ df_info = pd.DataFrame(omxs30_info)
 df_combined = pd.merge(df_info, df_pct_change,
                        left_on="SymbolYahoo", right_on="Symbol", how="left")
 
-# # Step 3: Assign MarketCap and WeightedDailyChange
-# df_combined["SumMarketCap"] = df_combined["MarketCap"]
-# df_combined["WeightedDailyChange"] = df_combined["PctChange"]
-
-# # Step 4: Combine duplicate companies (e.g., ATCO-A and ATCO-B)
-# # Group by `BaseSymbol` and `Sector`, then aggregate `SumMarketCap` and `WeightedDailyChange`
-# df_combined = (
-#     df_combined
-#     .groupby(["BaseSymbol", "Sector"], as_index=False)
-#     .agg({
-#         "SumMarketCap": "sum",  # Sum market caps
-#         "WeightedDailyChange": "mean",  # Average percentage change
-#     })
-# )
-
-# # Print the updated DataFrame
-# print(df_combined)
-
 # Step 3: Assign MarketCap and WeightedDailyChange
 df_combined["SumMarketCap"] = df_combined["MarketCap"]
 df_combined["WeightedDailyChange"] = df_combined["PctChange"]
@@ -167,11 +149,9 @@ df_combined = (
     })
 )
 
-# Assign a temporary market cap if it's missing or zero
-df_combined["SumMarketCap"] = df_combined["SumMarketCap"].replace(0, 1e9)
-
-# Print the updated DataFrame for debugging
+# Print the updated DataFrame
 print(df_combined)
+
 
 # %%
 # Step 3: Simulate MarketCap and WeightedDailyChange for demonstration purposes
