@@ -15,6 +15,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Configure Git FIRST
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
@@ -25,30 +30,25 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # Create target directory
-      - name: Create daily heatmap folder
+      - name: Create directory
         run: mkdir -p "daily heatmap"
 
-      # Generate timestamp for filenames
       - name: Generate timestamp
         id: timestamp
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-      # Run script and save to folder
-      - name: Run autorun_daily.py
+      - name: Run script and handle plots
         run: |
+          # Run script with output path
           python autorun_daily.py --output "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
+          
+          # Verify file creation (debugging)
+          ls -la "daily heatmap/"
 
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
-      # Commit files from the folder
-      - name: Commit and push plots
+      - name: Commit and push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
-          git commit -m "Add daily plot for ${{ env.TIMESTAMP }}"
+          git commit -m "Add plot for ${{ env.TIMESTAMP }}"
           git push origin main
