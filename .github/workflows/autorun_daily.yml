@@ -2,7 +2,7 @@ name: Run Autorun Daily Script
 
 on:
   schedule:
-    - cron: "46 16 * * *" # Run daily at 17:46 CET
+    - cron: "46 16 * * *" # Run daily at 16:46 UTC (17:46 CET)
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git FIRST
+      - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
@@ -30,25 +30,29 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Create directory
-        run: mkdir -p "daily heatmap"
-
       - name: Generate timestamp
         id: timestamp
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-      - name: Run script and handle plots
+      - name: Run script and verify plot generation
         run: |
-          # Run script with output path
+          # Run the Python script and specify output path
           python autorun_daily.py --output "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
-          
-          # Verify file creation (debugging)
+
+          # Verify the plot exists
+          if [ ! -f "daily heatmap/plot_${{ env.TIMESTAMP }}.png" ]; then
+            echo "Expected plot not found. Exiting.";
+            exit 1;
+          fi
+
+          # List the contents of the directory for debugging
           ls -la "daily heatmap/"
 
-      - name: Commit and push
+      - name: Commit and push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Add and commit the generated plot
           git add "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
           git commit -m "Add plot for ${{ env.TIMESTAMP }}"
           git push origin main
