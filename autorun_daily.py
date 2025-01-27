@@ -470,6 +470,10 @@ def upload_plots_to_repo(folder="daily heatmap"):
     """
     Add and commit all PNG files in the specified folder to the Git repository.
     """
+    import os
+    import subprocess
+    from datetime import datetime
+
     # Ensure the folder exists
     if not os.path.exists(folder):
         print(f"Folder '{folder}' does not exist. No plots to upload.")
@@ -487,13 +491,15 @@ def upload_plots_to_repo(folder="daily heatmap"):
     for plot in plot_files:
         subprocess.run(["git", "add", plot])
 
-    # Commit message
-    commit_message = f"Add daily plots for {
-        datetime.now().strftime('%Y-%m-%d')}"
+    # Commit message using string concatenation
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    commit_message = "Add daily plots for " + today_date
 
     # Commit and push changes
     subprocess.run(["git", "commit", "-m", commit_message])
     subprocess.run(["git", "push", "origin", "main"])
 
 
+upload_plots_to_repo(folder="daily heatmap")
+upload_plots_to_repo(folder="daily heatmap")
 # %%
