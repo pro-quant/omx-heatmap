@@ -414,50 +414,44 @@ plot_omxs30_sector_treemap(df_combined)
 
 def upload_plots_to_repo(folder="daily heatmap"):
     """
-    Add and commit all PNG files in the specified folder to the Git repository.
+    Add and commit specific plot files to the Git repository.
     """
-    # Check if the folder exists
-    if not os.path.exists(folder):
-        print(f"Folder '{folder}' does not exist. No plots to upload.")
-        return
+    # Expected filenames
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    expected_files = [
+        f"{folder}/OMXS30_Sector_heatmap_{today_date}.png",
+        f"{folder}/OMXS30_Sector_HeatMap_{today_date}.png"
+    ]
 
-    # Collect all PNG files in the folder
-    plot_files = [os.path.join(folder, f)
-                  for f in os.listdir(folder) if f.endswith(".png")]
+    # Check for expected files
+    for file in expected_files:
+        if not os.path.exists(file):
+            print(f"Error: Expected plot not found: {file}")
+            exit(1)  # Exit with error if any expected file is missing
 
-    if not plot_files:
-        print("No PNG files found to commit.")
-        return
+    print(f"All expected plots found: {expected_files}")
 
-    print(f"Found {len(plot_files)} PNG files to commit: {plot_files}")
-
-    # Add files to Git
-    for plot in plot_files:
-        result = subprocess.run(["git", "add", plot],
-                                capture_output=True, text=True)
+    # Add expected files to Git
+    for file in expected_files:
+        result = subprocess.run(["git", "add", file], capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"Error adding file {plot}: {result.stderr}")
-            return
+            print(f"Error adding file {file}: {result.stderr}")
+            exit(1)
 
     # Commit message using current date
-    today_date = datetime.now().strftime('%Y-%m-%d')
     commit_message = f"Add daily plots for {today_date}"
-
-    # Commit and push changes
-    result = subprocess.run(
-        ["git", "commit", "-m", commit_message], capture_output=True, text=True)
+    result = subprocess.run(["git", "commit", "-m", commit_message], capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error committing changes: {result.stderr}")
-        return
+        exit(1)
 
-    result = subprocess.run(
-        ["git", "push", "origin", "main"], capture_output=True, text=True)
+    # Push changes
+    result = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error pushing changes: {result.stderr}")
-        return
+        exit(1)
 
     print(f"Successfully committed and pushed daily plots for {today_date}")
-
 
 # Call the function
 upload_plots_to_repo(folder="daily heatmap")
