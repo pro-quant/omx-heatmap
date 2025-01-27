@@ -1,50 +1,58 @@
-import os
-import subprocess
-from datetime import datetime
+name: Run Autorun Daily Script
 
+on:
+  schedule:
+    - cron: "46 16 * * *" # Run daily at 16:46 UTC (17:46 CET)
+  workflow_dispatch:
 
-def upload_plots_to_repo(folder="daily heatmap"):
-    """
-    Add and commit all PNG files in the specified folder to the Git repository.
-    """
-    # Check if the folder exists
-    if not os.path.exists(folder):
-        print(f"Folder '{folder}' does not exist. No plots to upload.")
-        return
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
 
-    # Collect all PNG files in the folder
-    plot_files = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".png")]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-    if not plot_files:
-        print("No PNG files found to commit.")
-        return
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
-    print(f"Found {len(plot_files)} PNG files to commit: {plot_files}")
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
-    # Add files to Git
-    for plot in plot_files:
-        result = subprocess.run(["git", "add", plot], capture_output=True, text=True)
-        if result.returncode != 0:
-            print(f"Error adding file {plot}: {result.stderr}")
-            return
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # Commit message using current date
-    today_date = datetime.now().strftime('%Y-%m-%d')
-    commit_message = f"Add daily plots for {today_date}"
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "TIMESTAMP=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-    # Commit and push changes
-    result = subprocess.run(["git", "commit", "-m", commit_message], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error committing changes: {result.stderr}")
-        return
+      - name: Run script and verify plot generation
+        run: |
+          # Run the Python script and specify output path
+          python autorun_daily.py --output "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
 
-    result = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error pushing changes: {result.stderr}")
-        return
+          # Verify the plot exists
+          if [ ! -f "daily heatmap/plot_${{ env.TIMESTAMP }}.png" ]; then
+            echo "Expected plot not found. Exiting.";
+            exit 1;
+          fi
 
-    print(f"Successfully committed and pushed daily plots for {today_date}")
+          # List the contents of the directory for debugging
+          ls -la "daily heatmap/"
 
-
-# Call the function
-upload_plots_to_repo(folder="daily heatmap")
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Add and commit the generated plot
+          git add "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
+          git commit -m "Add plot for ${{ env.TIMESTAMP }}"
+          git push origin main
