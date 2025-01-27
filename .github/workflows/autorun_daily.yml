@@ -2,7 +2,7 @@ name: Run Autorun Daily Script
 
 on:
   schedule:
-    - cron: "46 16 * * *" # Run daily at 16:46 UTC (17:46 CET)
+    - cron: "46 15 * * *" # Run daily at 16:46 Sweden Time (15:46 UTC)
   workflow_dispatch:
 
 jobs:
@@ -36,12 +36,21 @@ jobs:
 
       - name: Run script and verify plot generation
         run: |
-          # Run the Python script and specify output path
-          python autorun_daily.py --output "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
+          # Run the Python script
+          python autorun_daily.py
 
-          # Verify the plot exists
-          if [ ! -f "daily heatmap/plot_${{ env.TIMESTAMP }}.png" ]; then
-            echo "Expected plot not found. Exiting.";
+          # Expected files
+          HEATMAP_FILE="daily heatmap/OMXS30_Sector_heatmap_${{ env.TIMESTAMP }}.png"
+          HEATMAP2_FILE="daily heatmap/OMXS30_Sector_HeatMap_${{ env.TIMESTAMP }}.png"
+
+          # Verify both plots exist
+          if [ ! -f "$HEATMAP_FILE" ]; then
+            echo "Expected plot not found: $HEATMAP_FILE. Exiting.";
+            exit 1;
+          fi
+
+          if [ ! -f "$HEATMAP2_FILE" ]; then
+            echo "Expected plot not found: $HEATMAP2_FILE. Exiting.";
             exit 1;
           fi
 
@@ -52,7 +61,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Add and commit the generated plot
-          git add "daily heatmap/plot_${{ env.TIMESTAMP }}.png"
-          git commit -m "Add plot for ${{ env.TIMESTAMP }}"
+          # Add and commit the generated plots
+          git add "daily heatmap/OMXS30_Sector_heatmap_${{ env.TIMESTAMP }}.png"
+          git add "daily heatmap/OMXS30_Sector_HeatMap_${{ env.TIMESTAMP }}.png"
+          git commit -m "Add plots for ${{ env.TIMESTAMP }}"
           git push origin main
