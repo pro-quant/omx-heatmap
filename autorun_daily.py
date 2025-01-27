@@ -201,7 +201,7 @@ def save_plot_with_date(fig, prefix, folder="daily heatmap"):
 
     # Save the figure
     fig.savefig(filename, dpi=800, bbox_inches="tight")
-    print(f"Plot saved as {filename}")
+    print(f"Plot saved successfully at: {filename}")
     return filename
 
 
@@ -470,11 +470,7 @@ def upload_plots_to_repo(folder="daily heatmap"):
     """
     Add and commit all PNG files in the specified folder to the Git repository.
     """
-    import os
-    import subprocess
-    from datetime import datetime
-
-    # Ensure the folder exists
+    # Check if the folder exists
     if not os.path.exists(folder):
         print(f"Folder '{folder}' does not exist. No plots to upload.")
         return
@@ -487,19 +483,38 @@ def upload_plots_to_repo(folder="daily heatmap"):
         print("No PNG files found to commit.")
         return
 
+    print(f"Found {len(plot_files)} PNG files to commit: {plot_files}")
+
     # Add files to Git
     for plot in plot_files:
-        subprocess.run(["git", "add", plot])
+        result = subprocess.run(["git", "add", plot],
+                                capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error adding file {plot}: {result.stderr}")
+            return
 
-    # Commit message using string concatenation
+    # Commit message using current date
     today_date = datetime.now().strftime('%Y-%m-%d')
-    commit_message = "Add daily plots for " + today_date
+    commit_message = f"Add daily plots for {today_date}"
 
     # Commit and push changes
-    subprocess.run(["git", "commit", "-m", commit_message])
-    subprocess.run(["git", "push", "origin", "main"])
+    result = subprocess.run(
+        ["git", "commit", "-m", commit_message], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error committing changes: {result.stderr}")
+        return
+
+    result = subprocess.run(
+        ["git", "push", "origin", "main"], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error pushing changes: {result.stderr}")
+        return
+
+    print(f"Successfully committed and pushed daily plots for {today_date}")
 
 
+# Call the function
 upload_plots_to_repo(folder="daily heatmap")
-upload_plots_to_repo(folder="daily heatmap")
+
+
 # %%
