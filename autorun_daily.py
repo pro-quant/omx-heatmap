@@ -262,7 +262,7 @@ def plot_omxs30_treemap_instagram(df_combined):
     os.makedirs("daily heatmap", exist_ok=True)
     # Save and show plot
     plt.tight_layout()
-    save_plot_with_date(fig, prefix="OMXS30_Sector_heatmap")
+    save_plot_with_date(fig, prefix="OMXS30_heatmap")
     plt.close()
 
 
@@ -433,25 +433,29 @@ def upload_plots_to_repo(folder="daily heatmap"):
 
     # Add expected files to Git
     for file in expected_files:
-        result = subprocess.run(["git", "add", file], capture_output=True, text=True)
+        result = subprocess.run(["git", "add", file],
+                                capture_output=True, text=True)
         if result.returncode != 0:
             print(f"Error adding file {file}: {result.stderr}")
             exit(1)
 
     # Commit message using current date
     commit_message = f"Add daily plots for {today_date}"
-    result = subprocess.run(["git", "commit", "-m", commit_message], capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", commit_message], capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error committing changes: {result.stderr}")
         exit(1)
 
     # Push changes
-    result = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "push", "origin", "main"], capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error pushing changes: {result.stderr}")
         exit(1)
 
     print(f"Successfully committed and pushed daily plots for {today_date}")
+
 
 # Call the function
 upload_plots_to_repo(folder="daily heatmap")
