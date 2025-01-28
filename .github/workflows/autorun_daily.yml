@@ -34,35 +34,17 @@ jobs:
         id: timestamp
         run: echo "TIMESTAMP=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-      - name: Run script and verify plot generation
+      - name: Run the main script
         run: |
-          # Run the Python script
-          python autorun_daily.py
-
-          # Expected files
-          HEATMAP_FILE="daily heatmap/OMXS30_Sector_heatmap_${{ env.TIMESTAMP }}.png"
-          HEATMAP2_FILE="daily heatmap/OMXS30_Sector_HeatMap_${{ env.TIMESTAMP }}.png"
-
-          # Verify both plots exist
-          if [ ! -f "$HEATMAP_FILE" ]; then
-            echo "Expected plot not found: $HEATMAP_FILE. Exiting.";
-            exit 1;
-          fi
-
-          if [ ! -f "$HEATMAP2_FILE" ]; then
-            echo "Expected plot not found: $HEATMAP2_FILE. Exiting.";
-            exit 1;
-          fi
-
-          # List the contents of the directory for debugging
-          ls -la "daily heatmap/"
+          # Navigate to the App directory and run the script
+          cd App
+          python main.py
 
       - name: Commit and push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Add and commit the generated plots
-          git add "daily heatmap/OMXS30_Sector_heatmap_${{ env.TIMESTAMP }}.png"
-          git add "daily heatmap/OMXS30_Sector_HeatMap_${{ env.TIMESTAMP }}.png"
-          git commit -m "Add plots for ${{ env.TIMESTAMP }}"
+          git add "App/daily heatmap/*.png"
+          git commit -m "Add daily plots for ${{ env.TIMESTAMP }}"
           git push origin main
