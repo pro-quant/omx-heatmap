@@ -1,4 +1,4 @@
-import os as os
+from fetchdata import fetch_data
 from omx_symbols import omxs30_info
 import yfinance as yf
 import pandas as pd
@@ -12,6 +12,7 @@ from matplotlib.patheffects import withStroke
 # Suppress FutureWarnings from yfinance
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 # Step 1: Fetch data
 data = []
@@ -83,6 +84,34 @@ print("Final grouped DataFrame:")
 print(df_combined)
 
 
+def prepare_combined_df():
+    """
+    Fetch data for OMXS30, merge, and aggregate MarketCap + WeightedDailyChange.
+    Returns the aggregated DataFrame 'df_combined'.
+    """
+    df_pct_change = fetch_data()
+    df_info = pd.DataFrame(omxs30_info)
+
+    df_combined = pd.merge(
+        df_info, df_pct_change, left_on="SymbolYahoo", right_on="Symbol", how="left"
+    )
+
+    # Assign columns
+    df_combined["SumMarketCap"] = df_combined["MarketCap"]
+    df_combined["WeightedDailyChange"] = df_combined["PctChange"]
+
+    # Combine duplicate companies (e.g., ATCO-A and ATCO-B)
+    df_combined = (
+        df_combined
+        .groupby(["BaseSymbol", "Sector"], as_index=False)
+        .agg({
+            "SumMarketCap": "sum",        # Sum market caps
+            "WeightedDailyChange": "mean"  # Average percentage change
+        })
+    )
+    return df_combined
+
+
 def save_plot_with_date(fig, prefix, folder="daily heatmap"):
     """
     Save the plot with a unique filename based on the current date and time.
@@ -109,8 +138,9 @@ def save_plot_with_date(fig, prefix, folder="daily heatmap"):
 def plot_omxs30_treemap_instagram(df_combined):
     """
     Create a treemap where each company's area is proportional to its market capitalization.
+    Returns the filename for the created plot.
     """
-    # Aggregate sector market caps for top-level rectangles
+    # ----- (Plot logic remains unchanged) -----
     sector_agg = (
         df_combined
         .groupby("Sector", as_index=False)["SumMarketCap"]
@@ -119,18 +149,15 @@ def plot_omxs30_treemap_instagram(df_combined):
         .sort_values("TotalSectorMcap", ascending=False)
     )
 
-    # Normalize sector sizes to fit within the plot bounds
     total_market_cap = sector_agg["TotalSectorMcap"].sum()
     sector_sizes = sector_agg["TotalSectorMcap"].values / \
         total_market_cap * (100 * 100)
     sector_names = sector_agg["Sector"].values
     sector_rects = squarify.squarify(sector_sizes, 0, 0, 100, 100)
 
-    # Find min and max change for coloring
     min_chg = df_combined["WeightedDailyChange"].min()
     max_chg = df_combined["WeightedDailyChange"].max()
 
-    # Two custom gradients: red-ish for negative, green-ish for positive
     light_red_to_red = LinearSegmentedColormap.from_list(
         "light_red_to_red", ["#FF0000", "#FFCCCC"]
     )
@@ -138,42 +165,31 @@ def plot_omxs30_treemap_instagram(df_combined):
         "light_green_to_strong_green", ["#CCFFCC", "#009900"]
     )
 
-    # Normalizers for negative and positive changes
     norm_neg = mcolors.Normalize(vmin=min_chg, vmax=0)
     norm_pos = mcolors.Normalize(vmin=0, vmax=max_chg)
 
-    # Create figure and axis
-    # Square figure for balanced treemap
     fig, ax = plt.subplots(figsize=(10.8, 19.2))
-
-    # Add margins
     margin = 1
     ax.set_xlim(-margin, 100 + margin)
     ax.set_ylim(-margin, 103 + margin)
     ax.axis("off")
 
-    # Main loop: each sector is subdivided into stocks
     for srect, sector_name in zip(sector_rects, sector_names):
         subdf = df_combined[df_combined["Sector"] == sector_name]
 
-        # Normalize company sizes within the sector to fit its allocated area
         sub_total_market_cap = subdf["SumMarketCap"].sum()
         sub_sizes = subdf["SumMarketCap"].values / \
             sub_total_market_cap * (srect["dx"] * srect["dy"])
         sub_rects = squarify.squarify(
-            sub_sizes, srect["x"], srect["y"], srect["dx"], srect["dy"]
-        )
+            sub_sizes, srect["x"], srect["y"], srect["dx"], srect["dy"])
 
-        # Plot each stock rectangle
         for sbox, row in zip(sub_rects, subdf.itertuples()):
             chg_val = row.WeightedDailyChange
-            # Decide which colormap (negative or positive)
             if chg_val >= 0:
                 color_rgba = light_green_to_strong_green(norm_pos(chg_val))
             else:
                 color_rgba = light_red_to_red(norm_neg(chg_val))
 
-            # Draw rectangle
             ax.add_patch(
                 plt.Rectangle(
                     (sbox["x"], sbox["y"]), sbox["dx"], sbox["dy"],
@@ -181,10 +197,8 @@ def plot_omxs30_treemap_instagram(df_combined):
                 )
             )
 
-            # Only add label if area is large enough
-            if sbox["dx"] * sbox["dy"] > 2:  # Threshold for small areas
+            if sbox["dx"] * sbox["dy"] > 2:
                 sym = row.BaseSymbol
-                # addign new line for percent
                 label_str = f"{sym}\n{chg_val:.2f}%"
                 ax.text(
                     sbox["x"] + sbox["dx"] / 2,
@@ -196,7 +210,6 @@ def plot_omxs30_treemap_instagram(df_combined):
                     path_effects=[withStroke(linewidth=2, foreground="black")]
                 )
 
-        # Draw sector-level bounding box with uniform line width
         ax.add_patch(
             plt.Rectangle(
                 (srect["x"], srect["y"]),
@@ -208,62 +221,43 @@ def plot_omxs30_treemap_instagram(df_combined):
             )
         )
 
-    # Add title and control its position
     fig.suptitle(
         f"OMXS30: {datetime.now().strftime('%Y-%m-%d')}",
-        fontsize=24, fontweight="bold", y=0.96  # Use `y` to control vertical position
+        fontsize=24, fontweight="bold", y=0.96
     )
-
-    os.makedirs("daily heatmap", exist_ok=True)
-    # Save and show plot
     plt.tight_layout()
-    save_plot_with_date(fig, prefix="OMXS30_heatmap")
+
+    plot_file = save_plot_with_date(fig, prefix="OMXS30_heatmap")
     plt.close()
-
-
-plot_omxs30_treemap_instagram(df_combined)
-
-# %% [markdown]
-# ### Sector heatmap
-
-# %%
+    return plot_file
 
 
 def plot_omxs30_sector_treemap(df_combined):
     """
-    Create a treemap where each sector's area is proportional to its total market capitalization,
-    and the label shows the sector name and its average daily percentage change with a custom font.
+    Create a treemap where each sector's area is proportional to its total market capitalization.
+    Returns the filename for the created plot.
     """
+    # ----- (Plot logic remains unchanged) -----
     import matplotlib.pyplot as plt
     from matplotlib.colors import LinearSegmentedColormap
     from matplotlib.patheffects import withStroke
     import squarify
     import matplotlib.colors as mcolors
-    from matplotlib import rcParams
-    from datetime import datetime
 
-    # Ensure necessary columns exist
     required_columns = {"Sector", "SumMarketCap", "WeightedDailyChange"}
     if not required_columns.issubset(df_combined.columns):
         missing_columns = required_columns - set(df_combined.columns)
         raise ValueError(f"Missing required columns: {missing_columns}")
 
-    # Check for non-empty data
     if df_combined.empty:
         raise ValueError("The provided DataFrame is empty.")
 
-    # Aggregate data by sector
     sector_agg = (
         df_combined
         .groupby("Sector", as_index=False)
-        .agg({
-            "SumMarketCap": "sum",  # Sum market caps
-            "WeightedDailyChange": "mean",  # Average percentage change
-        })
+        .agg({"SumMarketCap": "sum", "WeightedDailyChange": "mean"})
         .sort_values("SumMarketCap", ascending=False)
     )
-
-    # Normalize sector sizes to fit within the plot bounds
     total_market_cap = sector_agg["SumMarketCap"].sum()
     if total_market_cap == 0:
         raise ValueError(
@@ -275,7 +269,6 @@ def plot_omxs30_sector_treemap(df_combined):
     sector_changes = sector_agg["WeightedDailyChange"].values
     sector_rects = squarify.squarify(sector_sizes, 0, 0, 100, 100)
 
-    # Shorten sector names for clarity
     short_sector_names = {
         "Consumer Discretionary": "Cons. Disc.",
         "Consumer Staples": "Cons. Stap.",
@@ -289,11 +282,9 @@ def plot_omxs30_sector_treemap(df_combined):
     sector_names_short = [short_sector_names.get(
         name, name) for name in sector_names]
 
-    # Find min and max change for coloring
     min_chg = sector_agg["WeightedDailyChange"].min()
     max_chg = sector_agg["WeightedDailyChange"].max()
 
-    # Two custom gradients: red-ish for negative, green-ish for positive
     light_red_to_red = LinearSegmentedColormap.from_list(
         "light_red_to_red", ["#FF0000", "#FFCCCC"]
     )
@@ -301,32 +292,21 @@ def plot_omxs30_sector_treemap(df_combined):
         "light_green_to_strong_green", ["#CCFFCC", "#009900"]
     )
 
-    # Normalizers for negative and positive changes
     norm_neg = mcolors.Normalize(vmin=min_chg, vmax=0)
     norm_pos = mcolors.Normalize(vmin=0, vmax=max_chg)
 
-    # Create figure and axis
-    # Adjusted size for better layout
     fig, ax = plt.subplots(figsize=(10.8, 19.2))
-
-    # Add margins
     margin = 1
     ax.set_xlim(-margin, 100 + margin)
     ax.set_ylim(-margin, 103 + margin)
     ax.axis("off")
 
-    # Specify custom font for sector names
-    sector_font = "DejaVu Sans"
-
-    # Plot each sector rectangle
     for srect, sector_name, sector_change in zip(sector_rects, sector_names_short, sector_changes):
-        # Decide which colormap (negative or positive)
         if sector_change >= 0:
             color_rgba = light_green_to_strong_green(norm_pos(sector_change))
         else:
             color_rgba = light_red_to_red(norm_neg(sector_change))
 
-        # Draw rectangle with a dark black frame
         ax.add_patch(
             plt.Rectangle(
                 (srect["x"], srect["y"]), srect["dx"], srect["dy"],
@@ -334,11 +314,8 @@ def plot_omxs30_sector_treemap(df_combined):
             )
         )
 
-        # Increase font size for better visibility
         font_size = max(
             13, min(18, int(srect["dx"] * srect["dy"] ** 0.5 / 40)))
-
-        # Add sector name and average percentage change
         label_str = f"{sector_name}\n{sector_change:.2f}%"
         ax.text(
             srect["x"] + srect["dx"] / 2,
@@ -346,47 +323,38 @@ def plot_omxs30_sector_treemap(df_combined):
             label_str,
             ha="center", va="center",
             fontsize=font_size, fontweight="bold",
-            fontname=sector_font,  # Apply custom font
             color="white",
             path_effects=[withStroke(linewidth=2, foreground="black")]
         )
 
-    # Add title and control its position
     fig.suptitle(
         f"OMXS30 Sectors: {datetime.now().strftime('%Y-%m-%d')}",
         fontsize=20, fontweight="bold", y=0.96
     )
-
-    os.makedirs("daily heatmap", exist_ok=True)
-    # Save and show plot
     plt.tight_layout()
-    save_plot_with_date(fig, prefix="OMXS30_Sector_HeatMap")
+
+    plot_file = save_plot_with_date(fig, prefix="OMXS30_Sector_HeatMap")
     plt.show()
-
-
-plot_omxs30_sector_treemap(df_combined)
+    return plot_file
 
 
 def upload_plots_to_repo(folder="daily heatmap"):
     """
     Add and commit specific plot files to the Git repository.
     """
-    # Expected filenames
     today_date = datetime.now().strftime('%Y-%m-%d')
     expected_files = [
         f"{folder}/OMXS30_Sector_heatmap_{today_date}.png",
         f"{folder}/OMXS30_Sector_HeatMap_{today_date}.png"
     ]
 
-    # Check for expected files
     for file in expected_files:
         if not os.path.exists(file):
             print(f"Error: Expected plot not found: {file}")
-            exit(1)  # Exit with error if any expected file is missing
+            exit(1)
 
     print(f"All expected plots found: {expected_files}")
 
-    # Add expected files to Git
     for file in expected_files:
         result = subprocess.run(["git", "add", file],
                                 capture_output=True, text=True)
@@ -394,7 +362,6 @@ def upload_plots_to_repo(folder="daily heatmap"):
             print(f"Error adding file {file}: {result.stderr}")
             exit(1)
 
-    # Commit message using current date
     commit_message = f"Add daily plots for {today_date}"
     result = subprocess.run(
         ["git", "commit", "-m", commit_message], capture_output=True, text=True)
@@ -402,7 +369,6 @@ def upload_plots_to_repo(folder="daily heatmap"):
         print(f"Error committing changes: {result.stderr}")
         exit(1)
 
-    # Push changes
     result = subprocess.run(
         ["git", "push", "origin", "main"], capture_output=True, text=True)
     if result.returncode != 0:
@@ -412,8 +378,26 @@ def upload_plots_to_repo(folder="daily heatmap"):
     print(f"Successfully committed and pushed daily plots for {today_date}")
 
 
-# Call the function
-upload_plots_to_repo(folder="daily heatmap")
+def main():
+    """
+    Main function to:
+    1) Prepare combined DataFrame.
+    2) Generate both plots (stock-level heatmap & sector heatmap).
+    3) Commit the generated plots to GitHub.
+    """
+    # Prepare data
+    df_combined = prepare_combined_df()
+    print(df_combined)
+
+    # Generate two plots
+    # "OMXS30_heatmap_YYYY-MM-DD_HH-MM-SS.png"
+    plot_omxs30_treemap_instagram(df_combined)
+    # "OMXS30_Sector_HeatMap_YYYY-MM-DD_HH-MM-SS.png"
+    plot_omxs30_sector_treemap(df_combined)
+
+    # Upload to repository (with existing date-based checks)
+    upload_plots_to_repo(folder="daily heatmap")
 
 
-# %%
+if __name__ == "__main__":
+    main()
