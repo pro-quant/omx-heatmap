@@ -2,7 +2,7 @@ name: Run Autorun Daily Script
 
 on:
   schedule:
-    - cron: "46 15 * * *" # Run daily at 16:46 Sweden Time (15:46 UTC)
+    - cron: "46 16 * * *" # Run daily at 17:46 Sweden Time (15:46 UTC), bneed to change for summer
   workflow_dispatch:
 
 jobs:
