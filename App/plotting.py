@@ -1,87 +1,10 @@
-import subprocess
-import os as os
-from App.omx_symbols import omxs30_info
-import yfinance as yf
-import pandas as pd
-import time
-from datetime import datetime
 import matplotlib.pyplot as plt
-import squarify
 from matplotlib.colors import LinearSegmentedColormap
-import matplotlib.colors as mcolors
 from matplotlib.patheffects import withStroke
-# Suppress FutureWarnings from yfinance
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-
-# Step 1: Fetch data
-data = []
-
-for symbol in [info["SymbolYahoo"] for info in omxs30_info]:
-    try:
-        print(f"Fetching data for {symbol}...")
-        stock = yf.Ticker(symbol)
-        info = stock.info
-
-        market_cap = info.get("marketCap", 0)  # Default to 0 if missing
-        stock_data = yf.download(
-            symbol, period="5d", interval="1d", progress=False)
-
-        if len(stock_data) >= 2:
-            stock_data = stock_data.tail(2)
-            close_today = stock_data["Close"].iloc[-1]
-            close_yesterday = stock_data["Close"].iloc[-2]
-            pct_change = float(
-                ((close_today - close_yesterday) / close_yesterday) * 100)
-        else:
-            print(f"Not enough data for {symbol}")
-            close_today = close_yesterday = pct_change = None
-
-        data.append({
-            "Symbol": symbol,
-            "MarketCap": market_cap,
-            "CloseToday": close_today,
-            "CloseYesterday": close_yesterday,
-            "PctChange": pct_change
-        })
-    except Exception as e:
-        print(f"Error fetching data for {symbol}: {e}")
-        data.append({
-            "Symbol": symbol,
-            "MarketCap": None,
-            "CloseToday": None,
-            "CloseYesterday": None,
-            "PctChange": None
-        })
-
-    time.sleep(1)
-
-# Step 2: Create DataFrame and merge
-df_pct_change = pd.DataFrame(data)
-df_info = pd.DataFrame(omxs30_info)
-df_combined = pd.merge(df_info, df_pct_change,
-                       left_on="SymbolYahoo", right_on="Symbol", how="left")
-
-# Step 3: Clean and aggregate
-df_combined["PctChange"] = pd.to_numeric(
-    df_combined["PctChange"], errors="coerce")
-df_combined = df_combined.dropna(subset=["PctChange"])
-df_combined["SumMarketCap"] = df_combined["MarketCap"]
-df_combined["WeightedDailyChange"] = df_combined["PctChange"]
-
-# Group by BaseSymbol and Sector
-df_combined = (
-    df_combined
-    .groupby(["BaseSymbol", "Sector"], as_index=False)
-    .agg({
-        "SumMarketCap": "sum",
-        "WeightedDailyChange": "mean",
-    })
-)
-
-# Output final DataFrame
-print("Final grouped DataFrame:")
-print(df_combined)
+import squarify
+import os
+from datetime import datetime
+import matplotlib.colors as mcolors
 
 
 def save_plot_with_date(fig, prefix, folder="daily heatmap"):
@@ -222,14 +145,6 @@ def plot_omxs30_treemap_instagram(df_combined):
     plt.close()
 
 
-plot_omxs30_treemap_instagram(df_combined)
-
-# %% [markdown]
-# ### Sector heatmap
-
-# %%
-
-
 def plot_omxs30_sector_treemap(df_combined):
     """
     Create a treemap where each sector's area is proportional to its total market capitalization,
@@ -363,57 +278,3 @@ def plot_omxs30_sector_treemap(df_combined):
     plt.tight_layout()
     save_plot_with_date(fig, prefix="OMXS30_Sector_HeatMap")
     plt.show()
-
-
-plot_omxs30_sector_treemap(df_combined)
-
-
-def upload_plots_to_repo(folder="daily heatmap"):
-    """
-    Add and commit specific plot files to the Git repository.
-    """
-    # Expected filenames
-    today_date = datetime.now().strftime('%Y-%m-%d')
-    expected_files = [
-        f"{folder}/OMXS30_Sector_heatmap_{today_date}.png",
-        f"{folder}/OMXS30_Sector_HeatMap_{today_date}.png"
-    ]
-
-    # Check for expected files
-    for file in expected_files:
-        if not os.path.exists(file):
-            print(f"Error: Expected plot not found: {file}")
-            exit(1)  # Exit with error if any expected file is missing
-
-    print(f"All expected plots found: {expected_files}")
-
-    # Add expected files to Git
-    for file in expected_files:
-        result = subprocess.run(["git", "add", file],
-                                capture_output=True, text=True)
-        if result.returncode != 0:
-            print(f"Error adding file {file}: {result.stderr}")
-            exit(1)
-
-    # Commit message using current date
-    commit_message = f"Add daily plots for {today_date}"
-    result = subprocess.run(
-        ["git", "commit", "-m", commit_message], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error committing changes: {result.stderr}")
-        exit(1)
-
-    # Push changes
-    result = subprocess.run(
-        ["git", "push", "origin", "main"], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error pushing changes: {result.stderr}")
-        exit(1)
-
-    print(f"Successfully committed and pushed daily plots for {today_date}")
-
-
-# Call the function
-upload_plots_to_repo(folder="daily heatmap")
-
-# %%
