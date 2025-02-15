@@ -8,10 +8,10 @@ from datetime import datetime
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Define **Week 5 of 2025**
-week_number = 5
+week_number = 6
 year = 2025
-start_date = "2025-01-27"
-end_date = "2025-02-01"
+start_date = "2025-02-03"
+end_date = "2025-02-08"
 
 
 def main():
