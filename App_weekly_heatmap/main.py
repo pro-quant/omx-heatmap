@@ -8,10 +8,10 @@ from datetime import datetime
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-week_number = 7
+week_number = 6
 year = 2025
-start_date = "2025-02-10"
-end_date = "2025-02-15"
+start_date = "2025-02-03"
+end_date = "2025-02-08"
 
 
 def main():
@@ -50,12 +50,12 @@ def main():
         print(f"Error plotting heatmaps: {e}")
         return
 
-    # Step 4: Upload plots to repository
-    try:
-        upload_plots_to_repo(week_number, year)
-    except Exception as e:
-        print(f"Error uploading plots: {e}")
-        return
+    # # Step 4: Upload plots to repository
+    # try:
+    #     upload_plots_to_repo(week_number, year)
+    # except Exception as e:
+    #     print(f"Error uploading plots: {e}")
+    #     return
 
     print(f"Successfully completed heatmap generation and upload for Week {
           week_number}, {year}.")
