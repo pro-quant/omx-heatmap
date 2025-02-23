@@ -15,8 +15,8 @@ end_date = "2025-02-22"
 
 
 def main():
-    print(f"Fetching data for OMXS30 Week {week_number}, {
-          year} ({start_date} to {end_date})...\n")
+    # print(f"Fetching data for OMXS30 Week {week_number}, {
+    # year} ({start_date} to {end_date})...\n")
 
     # Step 1: Fetch data for the specified range
     try:
