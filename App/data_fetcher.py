@@ -16,7 +16,7 @@ def fetch_data(omxs30_info):
 
             market_cap = info.get("marketCap", 0)
             stock_data = yf.download(
-                symbol, period="5d", interval="1d", progress=False)
+                symbol, period="5d", interval="1d", progress=False, auto_adjust=False)
 
             if len(stock_data) >= 2:
                 stock_data = stock_data.tail(2)
